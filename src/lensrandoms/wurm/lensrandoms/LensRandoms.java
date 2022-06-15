@@ -139,7 +139,7 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			}
 			bytecode.add(bytecode.IFEQ);
 			bytecode.add(0,304);
-			
+		
 			try {
 				bytecode.addIload(localNames.get("decaytimeql"));
 			} catch (NotFoundException e1) {
@@ -148,7 +148,7 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			}
 			bytecode.add(bytecode.IFNE);
 			bytecode.add(0,21);
-			bytecode.addAload(0);
+			bytecode.add(bytecode.ALOAD_0);
 			bytecode.addInvokevirtual(ctItem,"isBulkItem","()Z");
 			bytecode.add(bytecode.IFNE);
 			bytecode.add(0,14);
@@ -171,6 +171,7 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			
 			byte[] search = bytecode.get();
 			
+			logger.log(Level.INFO, "Im trying to look for: " + bytecode );
 			
 			
 			//Bytecode to replace it
@@ -184,13 +185,13 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 				logger.log(Level.SEVERE, "Cant find local name for decay,deeded, or decaytimeql!");
 				e.printStackTrace();
 			}
-			bytecode.addAload(0);
+			bytecode.add(bytecode.ALOAD_0);
 			bytecode.addInvokevirtual(ctItem,"isBulkItem", "()B");
 			bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
 			try {
-				bytecode.addInvokestatic(cPool.get(this.getClass().getName()), "doDecayCode", "(B,B,B,B,I)B");
+				bytecode.addInvokestatic(cPool.get(this.getClass().getName()), "doDecayCode", Descriptor.ofMethod(CtPrimitiveType.booleanType, new CtClass[] {CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.intType}));
 			} catch (NotFoundException e) {
-				logger.log(Level.SEVERE,"Cant inject new decay code!");
+				logger.log(Level.SEVERE, "Dear god, I can't find my own mods name.");
 				e.printStackTrace();
 			}
 			bytecode.addGap(search.length - bytecode.length() - 3);
