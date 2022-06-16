@@ -1,0 +1,1 @@
+hex.encodestring is a nice method.

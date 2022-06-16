@@ -1,9 +1,11 @@
 package lensrandoms.wurm.lensrandoms;
 
+import java.io.FileNotFoundException;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.codec.binary.Hex;
 import org.gotti.wurmunlimited.modloader.classhooks.CodeReplacer;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.classhooks.LocalNameLookup;
@@ -20,7 +22,6 @@ import javassist.CtMethod;
 import javassist.CtPrimitiveType;
 import javassist.NotFoundException;
 import javassist.bytecode.BadBytecode;
-import javassist.bytecode.Bytecode;
 import javassist.bytecode.CodeAttribute;
 import javassist.bytecode.Descriptor;
 import javassist.bytecode.LocalVariableAttribute;
@@ -34,6 +35,9 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 	private boolean enableBonsaiTrees= true;
 	
 	
+	ClassPool cPool = HookManager.getInstance().getClassPool();
+	
+	
 	public static boolean doDecayCode(Boolean decay,Boolean onDeed,Boolean decaytimeql,Boolean isBulk,Integer isRandTick) {
 		return (decay && !onDeed && (decaytimeql || isBulk || isRandTick == 0));
 	}
@@ -44,8 +48,7 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 	 * 
 	 * 
 	 * 
-	 */
-	
+	 */	
 	
 	@Override
 	public void configure(Properties properties) {
@@ -90,18 +93,16 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 		} */
 
 		if (noDecayOnDeeds) {
-			ClassPool cPool = HookManager.getInstance().getClassPool();
-			CtClass jrand = null;
 			CtClass ctItem = null;
-			CtClass serverRand = null;
 			try {
 			 ctItem = cPool.get("com.wurmonline.server.items.Item");
-			 serverRand = cPool.get("com.wurmonline.server.Server");
-			 jrand = cPool.get("java.util.Random");
+			
 			} catch (NotFoundException e) {
-				logger.log(Level.SEVERE,"Cant find Item,Server, or Random class!");
+				logger.log(Level.SEVERE,"I cant find the Item class!");
 				throw new RuntimeException(e);
 			}
+			
+			
 			CtClass[] paramTypes = {
 					ctItem,
 					CtPrimitiveType.intType,
@@ -122,20 +123,22 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			
 			MethodInfo methodInfo = method.getMethodInfo();
 			CodeAttribute codeAttribute= methodInfo.getCodeAttribute();
+
 			
 			LocalNameLookup localNames = new LocalNameLookup((LocalVariableAttribute) codeAttribute.getAttribute(LocalVariableAttribute.tag));
+
 			
 			//Now for the Bytecode we're looking for...
 			//Line 20626 in com.wurmonline.server.items.Item
-		
+			//Bless you 'wyvernmods' for bytecode tools. Bless.
 			
-			Bytecode bytecode = new Bytecode(methodInfo.getConstPool());
+			BytecodeTools bytecode = new BytecodeTools(methodInfo.getConstPool());
 			
 			try {
 				bytecode.addIload(localNames.get("decay"));
-			} catch (NotFoundException e1) {
-				logger.log(Level.SEVERE,"Cant find decay!");
-				throw new RuntimeException(e1);
+			} catch (NotFoundException e2) {
+				logger.log(Level.SEVERE, "Can't find decay!");
+				throw new RuntimeException(e2);
 			}
 			bytecode.add(bytecode.IFEQ);
 			bytecode.addIndex(304);
@@ -149,30 +152,33 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			bytecode.add(bytecode.IFNE);
 			bytecode.addIndex(21);
 			bytecode.addAload(0);
-			//It breaks here.....
-			bytecode.addInvokevirtual(ctItem,"isBulkItem","()Z");
-			
+			bytecode.addMethodIndex(bytecode.INVOKEVIRTUAL, "isBulkItem", "()Z", "com.wurmonline.server.items.Item");
+			//bytecode.addInvokevirtual(ctItem,"isBulkItem","()Z");
 			bytecode.add(bytecode.IFNE);
 			bytecode.addIndex(14);
-			bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
 			
+			bytecode.addFieldIndex(bytecode.GETSTATIC,"rand","Ljava/util/Random;", "java.util.Random");
+			/*
+			breaks here
+			//bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
 			try {
-				
 				bytecode.addIload(localNames.get("num"));
 			} catch (NotFoundException e1) {
 				logger.log(Level.SEVERE,"Cant find num!");
 				throw new RuntimeException(e1);
 			}
-			bytecode.addInvokevirtual(jrand,"nextInt", "(I)I");
+			bytecode.addMethodIndex(bytecode.INVOKEVIRTUAL,"nextint","(I)I", "java.util.Random");
+			//bytecode.addInvokevirtual(jrand,"nextInt", "(I)I");
 			bytecode.add(bytecode.IFNE);
 			bytecode.addIndex(281);
-			
-			
+			*/
 			byte[] search = bytecode.get();
 			
 			
+			logger.log(Level.INFO,"The hexcode generated is: "+ Hex.encodeHexString(search));
+			
 			//Bytecode to replace it
-			bytecode = new Bytecode(methodInfo.getConstPool());
+			bytecode = new BytecodeTools(methodInfo.getConstPool());
 	
 			try {
 			bytecode.addAload(localNames.get("decay"));
@@ -183,9 +189,11 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 				throw new RuntimeException(e);
 			}
 			bytecode.addAload(0);
-			bytecode.addInvokevirtual(ctItem,"isBulkItem", "()B");
+			bytecode.addMethodIndex(bytecode.INVOKEVIRTUAL, "isBulkItem", "()Z", "com.wurmonline.server.items.Item");
+			//bytecode.addInvokevirtual(ctItem,"isBulkItem", "()B");
 			bytecode.addAload(0);
-			bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
+			bytecode.addFieldIndex(bytecode.GETSTATIC,"rand","Ljava/util/Random;", "java.util.Random");
+			//bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
 			try {
 				bytecode.addInvokestatic(cPool.get(this.getClass().getName()), "doDecayCode", Descriptor.ofMethod(CtPrimitiveType.booleanType, new CtClass[] {CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.intType}));
 			} catch (NotFoundException e) {
@@ -195,9 +203,12 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			bytecode.addGap(search.length - bytecode.length() - 3);
 			bytecode.add(bytecode.IFNE);
 			bytecode.addIndex(281);
-			byte[] replacement = bytecode.get();
-			//Actually replace code
 			
+			byte[] replacement = bytecode.get();
+			
+			
+			
+			//Actually replace code
 			try {
 				new CodeReplacer(codeAttribute).replaceCode(search, replacement);
 			} catch (NotFoundException | BadBytecode e) {
