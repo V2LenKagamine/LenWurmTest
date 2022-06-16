@@ -99,7 +99,8 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			 serverRand = cPool.get("com.wurmonline.server.Server");
 			 jrand = cPool.get("java.util.Random");
 			} catch (NotFoundException e) {
-				logger.log(Level.SEVERE,"Cant find Item,Server, or Random class! Somethings gonna be Null!");
+				logger.log(Level.SEVERE,"Cant find Item,Server, or Random class!");
+				throw new RuntimeException(e);
 			}
 			CtClass[] paramTypes = {
 					ctItem,
@@ -116,7 +117,7 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 				method = ctItem.getMethod("poll", Descriptor.ofMethod(CtPrimitiveType.booleanType, paramTypes));
 			} catch (NotFoundException e1) {
 				logger.log(Level.SEVERE,"Cant find Poll method!");
-				e1.printStackTrace();
+				throw new RuntimeException(e1);
 			}
 			
 			MethodInfo methodInfo = method.getMethodInfo();
@@ -130,48 +131,44 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			
 			Bytecode bytecode = new Bytecode(methodInfo.getConstPool());
 			
-			//try {
 			try {
 				bytecode.addIload(localNames.get("decay"));
 			} catch (NotFoundException e1) {
 				logger.log(Level.SEVERE,"Cant find decay!");
-				e1.printStackTrace();
+				throw new RuntimeException(e1);
 			}
 			bytecode.add(bytecode.IFEQ);
-			bytecode.add(0,304);
-		
+			bytecode.addIndex(304);
+			
 			try {
 				bytecode.addIload(localNames.get("decaytimeql"));
 			} catch (NotFoundException e1) {
 				logger.log(Level.SEVERE,"Cant find decaytimeql!");
-				e1.printStackTrace();
+				throw new RuntimeException(e1);
 			}
 			bytecode.add(bytecode.IFNE);
-			bytecode.add(0,21);
-			bytecode.add(bytecode.ALOAD_0);
+			bytecode.addIndex(21);
+			bytecode.addAload(0);
+			//It breaks here.....
 			bytecode.addInvokevirtual(ctItem,"isBulkItem","()Z");
+			
 			bytecode.add(bytecode.IFNE);
-			bytecode.add(0,14);
+			bytecode.addIndex(14);
 			bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
+			
 			try {
+				
 				bytecode.addIload(localNames.get("num"));
 			} catch (NotFoundException e1) {
 				logger.log(Level.SEVERE,"Cant find num!");
-				e1.printStackTrace();
+				throw new RuntimeException(e1);
 			}
 			bytecode.addInvokevirtual(jrand,"nextInt", "(I)I");
 			bytecode.add(bytecode.IFNE);
-			bytecode.add(0,281);
-			/*
-			} catch (NotFoundException e) {
-				logger.log(Level.SEVERE, "Error! Can't find Bytecode to replace!");
-				e.printStackTrace();
-			}
-			*/
+			bytecode.addIndex(281);
+			
 			
 			byte[] search = bytecode.get();
-			
-			logger.log(Level.INFO, "Im trying to look for: " + bytecode );
 			
 			
 			//Bytecode to replace it
@@ -183,20 +180,21 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 			bytecode.addAload(localNames.get("decaytimeql"));
 			} catch (NotFoundException e) {
 				logger.log(Level.SEVERE, "Cant find local name for decay,deeded, or decaytimeql!");
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
-			bytecode.add(bytecode.ALOAD_0);
+			bytecode.addAload(0);
 			bytecode.addInvokevirtual(ctItem,"isBulkItem", "()B");
+			bytecode.addAload(0);
 			bytecode.addGetstatic(serverRand,"rand", "Ljava/util/Random;");
 			try {
 				bytecode.addInvokestatic(cPool.get(this.getClass().getName()), "doDecayCode", Descriptor.ofMethod(CtPrimitiveType.booleanType, new CtClass[] {CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.booleanType,CtPrimitiveType.intType}));
 			} catch (NotFoundException e) {
 				logger.log(Level.SEVERE, "Dear god, I can't find my own mods name.");
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
 			bytecode.addGap(search.length - bytecode.length() - 3);
 			bytecode.add(bytecode.IFNE);
-			bytecode.add(0,281);
+			bytecode.addIndex(281);
 			byte[] replacement = bytecode.get();
 			//Actually replace code
 			
@@ -204,7 +202,7 @@ public class LensRandoms implements WurmServerMod, Configurable, Initable, PreIn
 				new CodeReplacer(codeAttribute).replaceCode(search, replacement);
 			} catch (NotFoundException | BadBytecode e) {
 				logger.log(Level.SEVERE, "Either the bytecode is bad, or it cant find the bytecode to replace! " + e);
-				e.printStackTrace();
+				throw new RuntimeException(e);
 			}
 		
 			
