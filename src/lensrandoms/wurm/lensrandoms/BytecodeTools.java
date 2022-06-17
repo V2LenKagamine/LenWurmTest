@@ -1,6 +1,5 @@
 package lensrandoms.wurm.lensrandoms;
 
-import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
@@ -10,8 +9,6 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
-
-import org.apache.commons.codec.binary.Hex;
 
 import javassist.bytecode.BadBytecode;
 import javassist.bytecode.Bytecode;
@@ -495,7 +492,9 @@ public class BytecodeTools extends Bytecode {
         out.close();
     }
     
-    static void printArrayToHex(Object[] obj, String name, Logger logger){
+    
+    
+	static void printArrayToHex(Object[] obj, String name, Logger logger){
         int length = obj.length;
         int[] c = new int[length];
         for (int i=0;i<length;i++){

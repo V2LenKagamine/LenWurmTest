@@ -51,9 +51,11 @@ public class PlantBonsaiAction implements ModAction, BehaviourProvider, ActionPe
 		return this;
 	}
 	
+	
 	@Override
 	public List<ActionEntry> getBehavioursFor(Creature performer,Item subject,Item target){
-		if (performer instanceof Player && subject.getTemplate().isFruit() && target.getTemplateId() == 1161) {
+		Boolean plantable = LensRandoms.isPlantable(subject);
+		if (performer instanceof Player && plantable && target.getTemplateId() == 1161) {
 			return Arrays.asList(ae);
 		} else {
 			return null;
